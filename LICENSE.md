@@ -1,6 +1,7 @@
 MIT License
 
 Copyright (c) 2019 Conor Durkan, Artur Bekasov, Iain Murray, George Papamakarios
+
 Copyright (c) 2020 Hadi M. Dolatabadi, Sarah Erfani, Christopher Leckie
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
