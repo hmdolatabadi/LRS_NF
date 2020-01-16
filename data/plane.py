@@ -179,6 +179,8 @@ class CheckerboardDataset(PlaneDataset):
         x2 = x2_ + torch.floor(x1) % 2
         self.data = torch.stack([x1, x2]).t() * 2
 
+# The code for Rings and 8-Gaussians are taken from the repository of Residual Flows, by Ricky T. Q. Chen at:
+# https://github.com/rtqichen/residual-flows
 class RingsDataset(PlaneDataset):
     def _create_data(self):
         rng        = np.random.RandomState()
