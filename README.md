@@ -1,6 +1,6 @@
 # Invertible Generative Modeling using Linear Rational Splines
 
-This repository includes the Python code of the paper:
+This repository includes the Python code of [the paper](https://arxiv.org/abs/2001.05168):
 
 > H. M. Dolatabadi, S. Erfani, and C. Leckie, "Invertible Generative Modeling using Linear Rational Splines," in _The 23rd International Conference on Artifcial Intelligence and Statistics (AISTATS) 2020_, 3-5 June 2020, Palermo, Sicily, Italy.
 
