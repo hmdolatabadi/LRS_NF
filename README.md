@@ -60,7 +60,7 @@ python experiments/vae.py --prior_type=rl-coupling --approximate_posterior_type=
 ```bash
 @inproceedings{dolatabadi2020lrs,
   title={Invertible Generative Modeling using Linear Rational Splines},
-  author={M. Dolatabadi, Hadi and Erfani, Sarah and Christopher, Leckie},
+  author={Dolatabadi, Hadi M. and Erfani, Sarah and Leckie, Christopher},
   booktitle={The 23rd International Conference on Artificial Intelligence and Statistics (AISTATS)},
   year={2020}
 }
