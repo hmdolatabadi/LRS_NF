@@ -1,8 +1,11 @@
 # Invertible Generative Modeling using Linear Rational Splines
 
-This repository includes the Python code of [the paper](https://arxiv.org/abs/2001.05168):
+*Hadi M. Dolatabadi, Sarah Erfani, and Christopher Leckie 2020*
 
-> H. M. Dolatabadi, S. Erfani, and C. Leckie, "Invertible Generative Modeling using Linear Rational Splines," in _The 23rd International Conference on Artifcial Intelligence and Statistics (AISTATS) 2020_, 3-5 June 2020, Palermo, Sicily, Italy.
+[![arXiv](http://img.shields.io/badge/arXiv-2001.05168-B31B1B.svg)](https://arxiv.org/abs/2001.05168)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+This repository includes the Python code of AISTATS 2020 paper [Invertible Generative Modeling using Linear Rational Splines](https://arxiv.org/abs/2001.05168).
 
 The code is mostly taken from [Neural Spline Flows](https://github.com/bayesiains/nsf) repository, initially downloaded on mid August 2019.
 
@@ -60,8 +63,9 @@ python experiments/vae.py --prior_type=rl-coupling --approximate_posterior_type=
 ```bash
 @inproceedings{dolatabadi2020lrs,
   title={Invertible Generative Modeling using Linear Rational Splines},
-  author={Dolatabadi, Hadi M. and Erfani, Sarah and Leckie, Christopher},
+  author={Hadi Mohaghegh Dolatabadi and Sarah Erfani and Christopher Leckie},
   booktitle={The 23rd International Conference on Artificial Intelligence and Statistics (AISTATS)},
+  pages={4236--4246},
   year={2020}
 }
 ```
