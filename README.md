@@ -5,9 +5,7 @@
 [![arXiv](http://img.shields.io/badge/arXiv-2001.05168-B31B1B.svg)](https://arxiv.org/abs/2001.05168)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository includes the Python code of AISTATS 2020 paper [Invertible Generative Modeling using Linear Rational Splines](https://arxiv.org/abs/2001.05168).
-
-The code is mostly taken from [Neural Spline Flows](https://github.com/bayesiains/nsf) repository, initially downloaded on mid August 2019.
+This repository includes the Python code of AISTATS 2020 paper [Invertible Generative Modeling using Linear Rational Splines](https://arxiv.org/abs/2001.05168). The code is mostly taken from [Neural Spline Flows](https://github.com/bayesiains/nsf) repository, initially downloaded on mid August 2019.
 
 ## Running the code
 
