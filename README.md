@@ -8,7 +8,7 @@
 This repository includes the Python code of AISTATS 2020 paper [Invertible Generative Modeling using Linear Rational Splines](https://arxiv.org/abs/2001.05168). The code is mostly taken from [Neural Spline Flows](https://github.com/bayesiains/nsf) repository, initially downloaded on mid August 2019.
 
 <p align="center">
-  <img width="800" height="200" src="./data/LRS_Flows.png">
+  <img width="800" height="220" src="./data/LRS_Flows.png">
 </p>
 
 ## Running the code
