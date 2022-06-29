@@ -207,7 +207,7 @@ with open(filename, 'w') as file:
 tbar = tqdm(range(args.n_total_steps))
 for step in tbar:
     flow.train()
-    scheduler.step(step)
+    # scheduler.step(step)
     optimizer.zero_grad()
 
     batch = next(train_loader).to(device)
