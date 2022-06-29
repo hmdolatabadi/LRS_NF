@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 import os
+import sys
+sys.path.append('/nobackup/naman/LRS_NF/')
 import utils
 
 from matplotlib import pyplot as plt
@@ -8,7 +10,7 @@ from torch.utils import data
 
 
 def load_bsds300():
-    path = os.path.join(utils.get_data_root(), 'bsds300', 'bsds300.hdf5')
+    path = os.path.join(utils.get_data_root(), 'BSDS300', 'BSDS300.hdf5')
     file = h5py.File(path, 'r')
     return file['train'], file['validation'], file['test']
 

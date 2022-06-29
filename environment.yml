@@ -13,7 +13,7 @@ dependencies:
   - numpy
   - scipy
   - pytorch
-  - cudatoolkit=9.0
+  - cudatoolkit
   - torchvision
   - pandas
   - pip:

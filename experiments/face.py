@@ -3,6 +3,8 @@ import json
 import numpy as np
 import torch
 import os
+import sys
+sys.path.append('/nobackup/naman/LRS_NF/')
 
 from matplotlib import cm, pyplot as plt
 from tensorboardX import SummaryWriter
@@ -85,6 +87,8 @@ if args.use_gpu:
 else:
     device = torch.device('cpu')
 
+print(device)
+
 # create data
 train_dataset = data_.load_face_dataset(
     name=args.dataset_name,
@@ -93,7 +97,7 @@ train_dataset = data_.load_face_dataset(
 train_loader = data_.InfiniteLoader(
     dataset=train_dataset,
     batch_size=args.batch_size,
-    shuffle=True,
+    shuffle=False,
     drop_last=True,
     num_epochs=None
 )
