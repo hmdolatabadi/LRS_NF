@@ -1,0 +1,30 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "plane",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": ["--dataset_name=rings", "--base_transform_type=rl-coupling"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/cole/LRS_NF",
+            "python": "${command:python.interpreterPath}"
+        },
+        {
+            "name": "face",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": ["--dataset_name=einstein", "--base_transform_type=rl", "--num_workers=8"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/cole/LRS_NF",
+            "python": "${command:python.interpreterPath}"
+        }
+    ]
+}

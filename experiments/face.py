@@ -4,7 +4,9 @@ import numpy as np
 import torch
 import os
 import sys
-sys.path.append('/nobackup/naman/LRS_NF/')
+# sys.path.append('/nobackup/naman/LRS_NF/')
+sys.path.append('/nobackup/cole/LRS_NF/')
+os.environ["DATAROOT"] = str(os.path.join(os.getcwd(), "data"))
 
 from matplotlib import cm, pyplot as plt
 from tensorboardX import SummaryWriter
@@ -193,7 +195,7 @@ n_params = utils.get_num_parameters(flow)
 print('There are {} trainable parameters in this model.'.format(n_params))
 
 # create optimizer
-optimizer = optim.Adam(flow.parameters(), lr=args.learning_rate)
+optimizer = optim.Adam(flow.parameters(), lr=args.learning_rate, capturable=True) # added capturable here
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.n_total_steps)
 
 # create summary writer and write to log directory
