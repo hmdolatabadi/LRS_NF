@@ -1,6 +1,10 @@
 import os
 import time
 
+import sys
+# sys.path.append('/nobackup/naman/LRS_NF/')
+sys.path.append('/nobackup/naman/LRS_NF/')
+
 import numpy as np
 import scipy.misc
 import sacred
@@ -112,6 +116,8 @@ def config():
     samples_per_row = 8
     num_reconstruct_batches = 10
     iter_num=10000
+
+    augment = False
 
 
 class ConvNet(nn.Module):
@@ -225,7 +231,7 @@ def create_transform_step(num_channels,
 @ex.capture
 def create_transform(c, h, w,
                      levels, hidden_channels, steps_per_level, alpha, num_bits, preprocessing,
-                     multi_scale):
+                     multi_scale, augment):
     if not isinstance(hidden_channels, list):
         hidden_channels = [hidden_channels] * levels
 
@@ -314,7 +320,7 @@ def create_flow(c, h, w,
 def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                batch_size, num_steps, learning_rate, cosine_annealing, warmup_fraction,
                temperatures, num_bits, num_workers, intervals, multi_gpu, actnorm,
-               optimizer_checkpoint, start_step, eta_min, _log):
+               optimizer_checkpoint, start_step, eta_min, _log, postprocess_transform=None):
     run_dir = fso.dir
 
     flow = flow.to(device)
@@ -338,12 +344,22 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         batch_size=batch_size,
         num_workers=0 # Faster than starting all workers just to get a single batch.
     )))
+
+    # og transform
+    new_transform = flow._transform
+
+    if postprocess_transform:
+        new_transform = transforms.CompositeTransform([
+            flow._transform,
+            postprocess_transform
+        ])
+
     identity_transform = transforms.CompositeTransform([
-        flow._transform,
-        transforms.InverseTransform(flow._transform)
+        new_transform,
+        transforms.InverseTransform(new_transform)
     ])
 
-    optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate, capturable=True)
 
     if optimizer_checkpoint is not None:
         optimizer.load_state_dict(torch.load(optimizer_checkpoint))
@@ -390,6 +406,9 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
 
         batch = batch.to(device)
 
+        if postprocess_transform:
+            batch = postprocess_transform(batch)
+            
         if multi_gpu:
             if actnorm and step == 0:
                 # Is using actnorm, data-dependent initialization doesn't work with data_parallel,
@@ -505,12 +524,12 @@ def set_device(use_gpu, multi_gpu, _log):
     return device
 
 @ex.capture
-def get_train_valid_data(dataset, num_bits, valid_frac):
-    return get_data(dataset, num_bits, train=True, valid_frac=valid_frac)
+def get_train_valid_data(dataset, num_bits, valid_frac, augment):
+    return get_data(dataset, num_bits, train=True, valid_frac=valid_frac, augment=augment)
 
 @ex.capture
-def get_test_data(dataset, num_bits):
-    return get_data(dataset, num_bits, train=False)
+def get_test_data(dataset, num_bits, augment):
+    return get_data(dataset, num_bits, train=False, augment=augment)
 
 @ex.command
 def sample_for_paper(seed):
@@ -643,7 +662,7 @@ def eval_reconstruct(num_bits, batch_size, seed, num_reconstruct_batches, _log, 
 
     flow = create_flow(c, h, w).to(device)
     flow.eval()
-
+    
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
@@ -709,6 +728,37 @@ def plot_data(num_bits, num_samples, samples_per_row, seed):
                nrow=samples_per_row,
                padding=0,
                pad_value=1)
+
+@ex.command(unobserved=True)
+def train_augmented(num_bits, batch_size, seed, num_reconstruct_batches, _log, output_path=''):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
+    device = set_device()
+
+    # with augment=True
+    train_dataset, val_dataset, (c, h, w) = get_train_valid_data()
+    
+    _log.info('Training dataset size: {}'.format(len(train_dataset)))
+
+    if val_dataset is None:
+        _log.info('No validation dataset')
+    else:
+        _log.info('Validation dataset size: {}'.format(len(val_dataset)))
+
+    _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
+
+    # load previously trained flow model g
+    # with flow_checkpoint to g
+    flow = create_flow(c, h, w).to(device)
+
+    # new transform on top of g
+    h_transform = transforms.CompositeTransform([
+        flow._transform,
+        transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
+    ])
+
+    train_flow(flow, train_dataset, val_dataset, (c, h, w), device, postprocess_transform=h_transform)
 
 @ex.automain
 def main(seed, _log):

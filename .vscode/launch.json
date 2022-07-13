@@ -12,7 +12,7 @@
             "args": ["--dataset_name=rings", "--base_transform_type=rl-coupling"],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "/nobackup/cole/LRS_NF",
+            "cwd": "/nobackup/naman/LRS_NF",
             "python": "${command:python.interpreterPath}"
         },
         {
@@ -23,7 +23,70 @@
             "args": ["--dataset_name=einstein", "--base_transform_type=rl", "--num_workers=8"],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "/nobackup/cole/LRS_NF",
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}"
+        },
+        {
+            "name": "train_augmented_images",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-4/flow_last.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}"
+        },
+        {
+            "name": "eval_reconstruct",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "eval_reconstruct", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-4/flow_last.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}"
+        },
+        {
+            "name": "sample_for_paper",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "sample_for_paper", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-10/flow_last.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}"
+        },
+        {
+            "name": "sample",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "sample", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-5/flow_last.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
             "python": "${command:python.interpreterPath}"
         }
     ]

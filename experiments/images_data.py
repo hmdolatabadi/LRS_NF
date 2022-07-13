@@ -53,7 +53,7 @@ class RandomHorizontalFlipTensor(object):
 def dataset_root(dataset_name):
     return os.path.join(autils.get_dataset_root(), dataset_name)
 
-def get_data(dataset, num_bits, train=True, valid_frac=None):
+def get_data(dataset, num_bits, train=True, valid_frac=None, augment=False):
     train_dataset = None
     valid_dataset = None
     test_dataset = None
@@ -104,10 +104,21 @@ def get_data(dataset, num_bits, train=True, valid_frac=None):
                 tvt.ToTensor(),
                 Preprocess(num_bits)
             ])
+            if augment:
+                train_transform=tvt.Compose([
+                    tvt.RandomHorizontalFlip(),
+                    tvt.AugMix(),
+                    tvt.ToTensor(),
+                    Preprocess(num_bits)
+                ])
+
             test_transform = tvt.Compose([
                 tvt.ToTensor(),
                 Preprocess(num_bits)
             ])
+
+            # if test_on_corrupted:
+            # TODO: Use CIFAR-10-C to test
 
         if train:
             train_dataset = dataset_class(

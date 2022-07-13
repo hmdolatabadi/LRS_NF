@@ -2,7 +2,7 @@ import socket
 import time
 
 
-ROOT = '/nobackup/cole/LRS_NF/'
+ROOT = '/nobackup/naman/LRS_NF/'
 
 def on_cluster():
     hostname = socket.gethostname()

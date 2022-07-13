@@ -23,7 +23,7 @@
   "num_bits": 8,
   "num_res_blocks": 3,
   "num_steps": 200,
-  "num_workers": 2,
+  "num_workers": 16,
   "optimizer_checkpoint": null,
   "pad": 2,
   "preprocessing": "glow",
@@ -48,5 +48,6 @@
   "use_gpu": true,
   "use_resnet": true,
   "valid_frac": 0.02,
-  "warmup_fraction": 0.0
+  "warmup_fraction": 0.0,
+  "augment": true
 }
