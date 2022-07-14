@@ -300,10 +300,18 @@ def create_transform(c, h, w,
 
 @ex.capture
 def create_flow(c, h, w,
-                flow_checkpoint, _log):
+                flow_checkpoint, _log, num_bits, augment):
 
     distribution = distributions.StandardNormal((c * h * w,))
     transform    = create_transform(c, h, w)
+
+    if augment:
+        _log.info('[augment] Adding a new transform layer')
+
+        transform = transforms.CompositeTransform([
+            transform,
+            transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
+        ])
 
     flow = flows.Flow(transform, distribution)
 
@@ -311,7 +319,7 @@ def create_flow(c, h, w,
         utils.get_num_parameters(flow)))
 
     if flow_checkpoint is not None:
-        flow.load_state_dict(torch.load(flow_checkpoint))
+        flow.load_state_dict(torch.load(flow_checkpoint), strict=False)
         _log.info('Flow state loaded from {}'.format(flow_checkpoint))
 
     return flow
@@ -320,7 +328,7 @@ def create_flow(c, h, w,
 def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                batch_size, num_steps, learning_rate, cosine_annealing, warmup_fraction,
                temperatures, num_bits, num_workers, intervals, multi_gpu, actnorm,
-               optimizer_checkpoint, start_step, eta_min, _log, postprocess_transform=None):
+               optimizer_checkpoint, start_step, eta_min, _log, augment, postprocess_transform=None):
     run_dir = fso.dir
 
     flow = flow.to(device)
@@ -484,6 +492,8 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                           .format(step, num_steps))
 
         if step > 0 and (step % intervals['save'] == 0 or step == (num_steps - 1)):
+            if run_dir == None:
+                run_dir = runs_dir + "/augment"
             torch.save(optimizer.state_dict(), os.path.join(run_dir, 'optimizer_last.pt'))
             torch.save(flow.state_dict(), os.path.join(run_dir, 'flow_last.pt'))
             _log.info('It: {}/{} saved optimizer_last.pt and flow_last.pt'.format(step, num_steps))
@@ -728,37 +738,6 @@ def plot_data(num_bits, num_samples, samples_per_row, seed):
                nrow=samples_per_row,
                padding=0,
                pad_value=1)
-
-@ex.command(unobserved=True)
-def train_augmented(num_bits, batch_size, seed, num_reconstruct_batches, _log, output_path=''):
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-
-    device = set_device()
-
-    # with augment=True
-    train_dataset, val_dataset, (c, h, w) = get_train_valid_data()
-    
-    _log.info('Training dataset size: {}'.format(len(train_dataset)))
-
-    if val_dataset is None:
-        _log.info('No validation dataset')
-    else:
-        _log.info('Validation dataset size: {}'.format(len(val_dataset)))
-
-    _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
-
-    # load previously trained flow model g
-    # with flow_checkpoint to g
-    flow = create_flow(c, h, w).to(device)
-
-    # new transform on top of g
-    h_transform = transforms.CompositeTransform([
-        flow._transform,
-        transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
-    ])
-
-    train_flow(flow, train_dataset, val_dataset, (c, h, w), device, postprocess_transform=h_transform)
 
 @ex.automain
 def main(seed, _log):
