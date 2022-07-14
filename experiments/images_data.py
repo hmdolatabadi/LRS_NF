@@ -117,9 +117,6 @@ def get_data(dataset, num_bits, train=True, valid_frac=None, augment=False):
                 Preprocess(num_bits)
             ])
 
-            # if test_on_corrupted:
-            # TODO: Use CIFAR-10-C to test
-
         if train:
             train_dataset = dataset_class(
                 root=root,

@@ -492,8 +492,6 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                           .format(step, num_steps))
 
         if step > 0 and (step % intervals['save'] == 0 or step == (num_steps - 1)):
-            if run_dir == None:
-                run_dir = runs_dir + "/augment"
             torch.save(optimizer.state_dict(), os.path.join(run_dir, 'optimizer_last.pt'))
             torch.save(flow.state_dict(), os.path.join(run_dir, 'flow_last.pt'))
             _log.info('It: {}/{} saved optimizer_last.pt and flow_last.pt'.format(step, num_steps))
@@ -556,47 +554,70 @@ def sample_for_paper(seed):
 
 
 @ex.command(unobserved=True)
-def eval_on_test(batch_size, num_workers, seed, _log):
+def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corruption_base_path):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     device = set_device()
+    
     test_dataset, (c, h, w) = get_test_data()
-    _log.info('Test dataset size: {}'.format(len(test_dataset)))
-    _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
-
     flow = create_flow(c, h, w).to(device)
-
     flow.eval()
-
-    def log_prob_fn(batch):
-        return flow.log_prob(batch.to(device))
-
     state_dict = flow.state_dict()
-    count      = 0
-    for name, param in state_dict.items():
 
-        if "weight" in name and not "batch_norm" in name and "conv_layers" in name:
-            print(name, param.shape)
-            param_tmp = param.data.cpu().numpy().reshape(1, -1)
+    def test(data):
+        _log.info('Test dataset size: {}'.format(len(data)))
+        _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
+   
+        def log_prob_fn(batch):
+            return flow.log_prob(batch.to(device))
 
-            if count == 0:
-                params_mat = param_tmp
-            else:
-                params_mat = np.r_[params_mat, param_tmp]
+        count      = 0
+        for name, param in state_dict.items():
 
-            count += 1
+            if "weight" in name and not "batch_norm" in name and "conv_layers" in name:
+                # print(name, param.shape)
+                param_tmp = param.data.cpu().numpy().reshape(1, -1)
 
-    np.savetxt("./weights.csv", params_mat, delimiter=",")
+                if count == 0:
+                    params_mat = param_tmp
+                else:
+                    params_mat = np.r_[params_mat, param_tmp]
 
-    test_loader=DataLoader(dataset=test_dataset,
-                           batch_size=batch_size,
-                           num_workers=num_workers)
-    test_loader = tqdm(test_loader)
+                count += 1
 
-    mean, err = autils.eval_log_density_2(log_prob_fn=log_prob_fn,
-                                          data_loader=test_loader,
-                                          c=c, h=h, w=w)
+        np.savetxt("./weights.csv", params_mat, delimiter=",")
+
+        test_loader=DataLoader(dataset=data,
+                            batch_size=batch_size,
+                            num_workers=num_workers)
+        test_loader = tqdm(test_loader)
+
+        mean, err = autils.eval_log_density_2(log_prob_fn=log_prob_fn,
+                                            data_loader=test_loader,
+                                            c=c, h=h, w=w)
+        return mean, err
+        
+    if test_on_corruptions:
+        CORRUPTIONS = [
+                        'gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur',
+                        'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog',
+                        'brightness', 'contrast', 'elastic_transform', 'pixelate',
+                        'jpeg_compression'
+                    ]
+        mean, err = 0., 0.
+        for corruption in CORRUPTIONS:
+            test_dataset.data = np.load(corruption_base_path + corruption + '.npy')
+            test_dataset.targets = torch.LongTensor(np.load(corruption_base_path + 'labels.npy'))
+    
+            m, e = test(test_dataset)
+            mean+=m
+            err+=e
+        mean /= len(CORRUPTIONS)
+        err /= len(CORRUPTIONS)
+    else:
+        mean, err = test(test_dataset)
+    
     print('Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(mean, err))
 
 @ex.command(unobserved=True)
