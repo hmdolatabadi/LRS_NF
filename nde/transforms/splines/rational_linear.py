@@ -64,7 +64,7 @@ def rational_linear_spline(inputs,
                            min_bin_width=DEFAULT_MIN_BIN_WIDTH,
                            min_bin_height=DEFAULT_MIN_BIN_HEIGHT,
                            min_derivative=DEFAULT_MIN_DERIVATIVE):
-
+    assert inputs.numel() != 0
     if torch.min(inputs) < left or torch.max(inputs) > right:
         raise transforms.InputOutsideDomain()
 

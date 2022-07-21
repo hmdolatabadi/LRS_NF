@@ -308,10 +308,10 @@ def create_flow(c, h, w,
     if augment:
         _log.info('[augment] Adding a new transform layer')
 
-        transform = transforms.CompositeTransform([
-            transform,
-            transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
-        ])
+        # transform = transforms.CompositeTransform([
+        #     transform,
+        #     transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
+        # ])
 
     flow = flows.Flow(transform, distribution)
 
@@ -328,7 +328,7 @@ def create_flow(c, h, w,
 def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                batch_size, num_steps, learning_rate, cosine_annealing, warmup_fraction,
                temperatures, num_bits, num_workers, intervals, multi_gpu, actnorm,
-               optimizer_checkpoint, start_step, eta_min, _log, augment, postprocess_transform=None):
+               optimizer_checkpoint, start_step, eta_min, _log, augment):
     run_dir = fso.dir
 
     flow = flow.to(device)
@@ -353,18 +353,9 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         num_workers=0 # Faster than starting all workers just to get a single batch.
     )))
 
-    # og transform
-    new_transform = flow._transform
-
-    if postprocess_transform:
-        new_transform = transforms.CompositeTransform([
-            flow._transform,
-            postprocess_transform
-        ])
-
     identity_transform = transforms.CompositeTransform([
-        new_transform,
-        transforms.InverseTransform(new_transform)
+        flow._transform,
+        transforms.InverseTransform(flow._transform)
     ])
 
     optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate, capturable=True)
@@ -413,9 +404,6 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         optimizer.zero_grad()
 
         batch = batch.to(device)
-
-        if postprocess_transform:
-            batch = postprocess_transform(batch)
             
         if multi_gpu:
             if actnorm and step == 0:
@@ -611,6 +599,7 @@ def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corru
             test_dataset.targets = torch.LongTensor(np.load(corruption_base_path + 'labels.npy'))
     
             m, e = test(test_dataset)
+            print('On Corruption {}: Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(corruption, m, e))
             mean+=m
             err+=e
         mean /= len(CORRUPTIONS)
