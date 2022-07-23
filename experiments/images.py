@@ -141,6 +141,8 @@ def create_transform_step(num_channels,
                           use_resnet, num_res_blocks, resnet_batchnorm, dropout_prob):
     if use_resnet:
         def create_convnet(in_channels, out_channels):
+            # in_channel = 6
+            # out_channels = 90
             net = nn_.ConvResidualNet(in_channels=in_channels,
                                       out_channels=out_channels,
                                       hidden_channels=hidden_channels,
@@ -154,6 +156,8 @@ def create_transform_step(num_channels,
         def create_convnet(in_channels, out_channels):
             return ConvNet(in_channels, hidden_channels, out_channels)
 
+    # here num_channels = 4c = 12
+    # divide data into two parts (split at midpoint)
     mask = utils.create_mid_split_binary_mask(num_channels)
 
     if coupling_layer_type == 'cubic_spline':
@@ -239,6 +243,11 @@ def create_transform(c, h, w,
         mct = transforms.MultiscaleCompositeTransform(num_transforms=levels)
         for level, level_hidden_channels in zip(range(levels), hidden_channels):
             squeeze_transform = transforms.SqueezeTransform()
+
+            # after squeeze transform (explained in RealNVP paper)
+            # c = 4c
+            # h = h/2
+            # w = w/2
             c, h, w = squeeze_transform.get_output_shape(c, h, w)
 
             transform_level = transforms.CompositeTransform(
@@ -308,10 +317,10 @@ def create_flow(c, h, w,
     if augment:
         _log.info('[augment] Adding a new transform layer')
 
-        # transform = transforms.CompositeTransform([
-        #     transform,
-        #     transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
-        # ])
+        transform = transforms.CompositeTransform([
+            transform,
+            transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
+        ])
 
     flow = flows.Flow(transform, distribution)
 

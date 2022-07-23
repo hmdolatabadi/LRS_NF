@@ -1,7 +1,7 @@
 {
   "actnorm": true,
   "alpha": 0.05,
-  "augment": false,
+  "augment": true,
   "batch_size": 256,
   "cosine_annealing": true,
   "test_on_corruptions": true,
@@ -22,7 +22,7 @@
   "learning_rate": 0.0005,
   "levels": 3,
   "multi_gpu": true,
-  "multi_scale": false,
+  "multi_scale": true,
   "num_bits": 8,
   "num_res_blocks": 3,
   "num_steps": 200000,

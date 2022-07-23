@@ -53,15 +53,14 @@
             }
         },
         {
-            "name": "train_augmented_images",
+            "name": "checkpoint_train_images",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "args": [
-                "train_augmented",
                 "with", 
                 "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
-                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_last_g.pt"
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-g/flow_best.pt"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
