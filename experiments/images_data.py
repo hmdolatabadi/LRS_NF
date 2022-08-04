@@ -107,6 +107,7 @@ def get_data(dataset, num_bits, train=True, valid_frac=None, augment=False):
             if augment:
                 train_transform=tvt.Compose([
                     tvt.RandomHorizontalFlip(),
+                    tvt.AutoAugment(tvt.AutoAugmentPolicy.CIFAR10),
                     tvt.AugMix(),
                     tvt.ToTensor(),
                     Preprocess(num_bits)
