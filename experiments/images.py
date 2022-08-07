@@ -367,18 +367,23 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         transforms.InverseTransform(flow._transform)
     ])
 
-    # freeze all layers 1-6 and 7 and 8
-    for _, param in flow.named_parameters():
-        param.requires_grad = False
+    optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate, capturable=True)
 
-    layer_name = "_transform._transforms.1._transforms.2._transforms."
+    if augment:
+        _log.info('[augment] Freezing layer 1-6 of the flow model')
+        # freeze all parameters
+        for _, param in flow.named_parameters():
+            param.require_grad = False
 
-    # unfreeze layers 7 and 8
-    for name, param in flow.named_parameters():
-        if (layer_name + "7." or layer_name + "8.") in name:
-            param.requires_grad = True
+        layer_name = "_transform._transforms.1._transforms.2._transforms."
 
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, flow.parameters()), lr=learning_rate, capturable=True)
+        # unfreeze 7th and 8th layer
+        for name, param in flow.named_parameters():
+            if (layer_name + '7.' or  layer_name + '8.') in name:
+                param.require_grad = True
+        
+        # only pass params whose requires_grad = True  
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, flow.parameters()), lr=learning_rate, capturable=True)
 
     if optimizer_checkpoint is not None:
         optimizer.load_state_dict(torch.load(optimizer_checkpoint))
