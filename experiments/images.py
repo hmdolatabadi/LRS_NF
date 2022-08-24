@@ -34,6 +34,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
+from importlib import reload
 
 # Capture job id on the cluster
 sacred.SETTINGS.HOST_INFO.CAPTURED_ENV.append('SLURM_JOB_ID')
@@ -367,9 +368,9 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         transforms.InverseTransform(flow._transform)
     ])
 
-    optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate, capturable=True)
+    optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate)
 
-    if augment:
+    if not augment:
         _log.info('[augment] Freezing layer 1-6 of the flow model')
         # freeze all parameters
         for _, param in flow.named_parameters():
@@ -549,8 +550,8 @@ def get_train_valid_data(dataset, num_bits, valid_frac, augment):
     return get_data(dataset, num_bits, train=True, valid_frac=valid_frac, augment=augment)
 
 @ex.capture
-def get_test_data(dataset, num_bits, augment):
-    return get_data(dataset, num_bits, train=False, augment=augment)
+def get_test_data(dataset, num_bits, augment, corruption):
+    return get_data(dataset, num_bits, train=False, augment=augment, corruption=corruption)
 
 @ex.command
 def sample_for_paper(seed):
@@ -567,7 +568,7 @@ def sample_for_paper(seed):
 
 
 @ex.command(unobserved=True)
-def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corruption_base_path):
+def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corruption_base_path, corruptions, dataset):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -578,7 +579,7 @@ def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corru
     flow.eval()
     state_dict = flow.state_dict()
 
-    def test(data):
+    def test(data, dataset, corruption=None):
         _log.info('Test dataset size: {}'.format(len(data)))
         _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
    
@@ -599,7 +600,9 @@ def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corru
 
                 count += 1
 
-        np.savetxt("./weights.csv", params_mat, delimiter=",")
+        # np.savetxt("./weights.csv", params_mat, delimiter=",")
+        if corruption and dataset == "mnist":
+            data, _ = get_test_data(corruption=corruption)
 
         test_loader=DataLoader(dataset=data,
                             batch_size=batch_size,
@@ -612,25 +615,27 @@ def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corru
         return mean, err
         
     if test_on_corruptions:
-        CORRUPTIONS = [
-                        'gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur',
-                        'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog',
-                        'brightness', 'contrast', 'elastic_transform', 'pixelate',
-                        'jpeg_compression'
-                    ]
+        # if dataset == "mnist":
+        #     reload(mnist_corruptions)
+
         mean, err = 0., 0.
-        for corruption in CORRUPTIONS:
-            test_dataset.data = np.load(corruption_base_path + corruption + '.npy')
-            test_dataset.targets = torch.LongTensor(np.load(corruption_base_path + 'labels.npy'))
-    
-            m, e = test(test_dataset)
+        for corruption in corruptions:
+            # if os.path.isdir(corruption_base_path + corruption):
+            #     data_path = corruption_base_path + corruption + '/test_images.npy'
+            #     label_path = corruption_base_path + corruption + '/test_labels.npy'
+            if dataset != "mnist":
+                data_path = corruption_base_path + corruption + '.npy'
+                label_path = corruption_base_path + 'labels.npy'
+                test_dataset.data = np.load(data_path)
+                test_dataset.targets = torch.LongTensor(np.load(label_path))
+            m, e = test(test_dataset, dataset, corruption)
             print('On Corruption {}: Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(corruption, m, e))
             mean+=m
             err+=e
-        mean /= len(CORRUPTIONS)
-        err /= len(CORRUPTIONS)
+        mean /= len(corruptions)
+        err /= len(corruptions)
     else:
-        mean, err = test(test_dataset)
+        mean, err = test(test_dataset, dataset)
     
     print('Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(mean, err))
 
@@ -656,7 +661,7 @@ def sample(seed, num_bits, num_samples, samples_per_row, _log, output_path=None)
     samples = flow.sample(num_samples)
     samples = preprocess.inverse(samples)
 
-    save_image(samples.cpu(), output_path,
+    save_1   (samples.cpu(), output_path,
                nrow=samples_per_row,
                padding=4,
                pad_value=1)

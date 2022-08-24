@@ -79,7 +79,7 @@
                 "eval_reconstruct", 
                 "with", 
                 "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
-                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_last.pt"
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_best.pt"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -99,7 +99,7 @@
                 "sample_for_paper", 
                 "with", 
                 "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
-                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_last.pt"
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_best.pt"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -119,7 +119,7 @@
                 "sample", 
                 "with", 
                 "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
-                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-3/flow_last.pt"
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-3/flow_best.pt"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -138,8 +138,8 @@
             "args": [
                 "eval_on_test", 
                 "with", 
-                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
-                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-10/flow_last.pt"
+                "/nobackup/naman/LRS_NF/experiments/image_configs/mnist-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/mnist-8-bit-g/flow_best.pt"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

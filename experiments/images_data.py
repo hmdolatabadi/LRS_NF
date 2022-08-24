@@ -9,6 +9,24 @@ from torch.utils.data import Subset, random_split
 import data
 from experiments import autils
 
+from mnist_corruptions import *
+
+
+class MNISTCorrupt(object):
+    """corrupt an image."""
+    def __init__(self, corruption):
+        self.corruption = corruption
+
+    def __call__(self, img):
+        img = torch.squeeze(img) # remove 0th dimension
+        img = img.numpy() # convert to numpy array
+        img = torch.tensor(eval(self.corruption)(img))
+        img = torch.unsqueeze(img, 0)
+        return img
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(corruption={})'.format(self.corruption)
+
 class Preprocess:
     def __init__(self, num_bits):
         self.num_bits = num_bits
@@ -53,7 +71,7 @@ class RandomHorizontalFlipTensor(object):
 def dataset_root(dataset_name):
     return os.path.join(autils.get_dataset_root(), dataset_name)
 
-def get_data(dataset, num_bits, train=True, valid_frac=None, augment=False):
+def get_data(dataset, num_bits, corruption=None, train=True, valid_frac=None, augment=False):
     train_dataset = None
     valid_dataset = None
     test_dataset = None
@@ -160,7 +178,7 @@ def get_data(dataset, num_bits, train=True, valid_frac=None, augment=False):
             train_dataset = dataset_class(
                 root=root,
                 train=True,
-                download=True,
+                download=False,
                 transform=tvt.Compose([
                     tvt.ToTensor(),
                     Preprocess(num_bits)
@@ -229,11 +247,25 @@ def get_data(dataset, num_bits, train=True, valid_frac=None, augment=False):
             tvt.ToTensor(),
             Preprocess(num_bits)
         ])
+        if augment:
+            train_transform=tvt.Compose([
+                tvt.AugMix(),
+                tvt.ToTensor(),
+                Preprocess(num_bits)
+            ])
+        
 
         test_transform = tvt.Compose([
             tvt.ToTensor(),
             Preprocess(num_bits)
         ])
+
+        if corruption != "None":
+            test_transform = tvt.Compose([
+                tvt.ToTensor(),
+                Preprocess(num_bits),
+                MNISTCorrupt(corruption)
+            ])
 
         if train:
             train_dataset = datasets.MNIST(
