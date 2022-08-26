@@ -71,7 +71,7 @@ class RandomHorizontalFlipTensor(object):
 def dataset_root(dataset_name):
     return os.path.join(autils.get_dataset_root(), dataset_name)
 
-def get_data(dataset, num_bits, corruption=None, train=True, valid_frac=None, augment=False):
+def get_data(dataset, num_bits, corruption="None", train=True, valid_frac=None, augment=False):
     train_dataset = None
     valid_dataset = None
     test_dataset = None

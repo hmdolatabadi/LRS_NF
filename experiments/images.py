@@ -338,7 +338,7 @@ def create_flow(c, h, w,
 def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                batch_size, num_steps, learning_rate, cosine_annealing, warmup_fraction,
                temperatures, num_bits, num_workers, intervals, multi_gpu, actnorm,
-               optimizer_checkpoint, start_step, eta_min, _log, augment):
+               optimizer_checkpoint, start_step, eta_min, _log, augment, freeze):
     run_dir = fso.dir
 
     flow = flow.to(device)
@@ -370,7 +370,7 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
 
     optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate)
 
-    if not augment:
+    if freeze and augment:
         _log.info('[augment] Freezing layer 1-6 of the flow model')
         # freeze all parameters
         for _, param in flow.named_parameters():

@@ -1,6 +1,7 @@
 {
   "actnorm": true,
   "alpha": 0.05,
+  "freeze": true, 
   "augment": false,
   "test_on_corruptions": true,
   "corruption_base_path": "/nobackup2/datasets/mnist/mnist_c/",
