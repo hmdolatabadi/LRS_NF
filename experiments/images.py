@@ -36,6 +36,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from importlib import reload
 
+import json
+
 # Capture job id on the cluster
 sacred.SETTINGS.HOST_INFO.CAPTURED_ENV.append('SLURM_JOB_ID')
 
@@ -338,7 +340,7 @@ def create_flow(c, h, w,
 def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                batch_size, num_steps, learning_rate, cosine_annealing, warmup_fraction,
                temperatures, num_bits, num_workers, intervals, multi_gpu, actnorm,
-               optimizer_checkpoint, start_step, eta_min, _log, augment, freeze):
+               optimizer_checkpoint, start_step, eta_min, _log, augment, freeze, tune_layers):
     run_dir = fso.dir
 
     flow = flow.to(device)
@@ -371,18 +373,13 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
     optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate)
 
     if freeze and augment:
-        _log.info('[augment] Freezing layer 1-6 of the flow model')
-        # freeze all parameters
-        for _, param in flow.named_parameters():
-            param.require_grad = False
+        _log.info('[augment] Freezing all layers of the flow model except {}'.format(tune_layers))
 
-        layer_name = "_transform._transforms.1._transforms.2._transforms."
-
-        # unfreeze 7th and 8th layer
         for name, param in flow.named_parameters():
-            if (layer_name + '7.' or  layer_name + '8.') in name:
+            param.require_grad = False
+            if any(L in name for L in tune_layers):
                 param.require_grad = True
-        
+
         # only pass params whose requires_grad = True  
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, flow.parameters()), lr=learning_rate, capturable=True)
 
@@ -568,7 +565,7 @@ def sample_for_paper(seed):
 
 
 @ex.command(unobserved=True)
-def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corruption_base_path, corruptions, dataset):
+def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corruption_base_path, corruptions, dataset, flow_checkpoint, tune_layers):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -579,65 +576,61 @@ def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corru
     flow.eval()
     state_dict = flow.state_dict()
 
-    def test(data, dataset, corruption=None):
-        _log.info('Test dataset size: {}'.format(len(data)))
-        _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
+    # only store the weights of tuned layers
+    param_mat = {}
+    for name, param in flow.named_parameters():
+        param.require_grad = False
+        if any(L in name for L in tune_layers):
+            param_data = param.data.tolist()
+            param_mat[name] = param_data
+
+    with open("./weights_" + flow_checkpoint.split('/')[-2] + ".json", "w") as outfile:
+        json.dump(param_mat, outfile)
+
+    # def test(data, corruption=None):
+    #     _log.info('Test dataset size: {}'.format(len(data)))
+    #     _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
    
-        def log_prob_fn(batch):
-            return flow.log_prob(batch.to(device))
+    #     def log_prob_fn(batch):
+    #         return flow.log_prob(batch.to(device))
 
-        count      = 0
-        for name, param in state_dict.items():
+    #     if corruption and dataset == "mnist":
+    #         data, _ = get_test_data(corruption=corruption)
 
-            if "weight" in name and not "batch_norm" in name and "conv_layers" in name:
-                # print(name, param.shape)
-                param_tmp = param.data.cpu().numpy().reshape(1, -1)
+    #     test_loader=DataLoader(dataset=data,
+    #                         batch_size=batch_size,
+    #                         num_workers=num_workers)
+    #     test_loader = tqdm(test_loader)
 
-                if count == 0:
-                    params_mat = param_tmp
-                else:
-                    params_mat = np.r_[params_mat, param_tmp]
-
-                count += 1
-
-        # np.savetxt("./weights.csv", params_mat, delimiter=",")
-        if corruption and dataset == "mnist":
-            data, _ = get_test_data(corruption=corruption)
-
-        test_loader=DataLoader(dataset=data,
-                            batch_size=batch_size,
-                            num_workers=num_workers)
-        test_loader = tqdm(test_loader)
-
-        mean, err = autils.eval_log_density_2(log_prob_fn=log_prob_fn,
-                                            data_loader=test_loader,
-                                            c=c, h=h, w=w)
-        return mean, err
+    #     mean, err = autils.eval_log_density_2(log_prob_fn=log_prob_fn,
+    #                                         data_loader=test_loader,
+    #                                         c=c, h=h, w=w)
+    #     return mean, err
         
-    if test_on_corruptions:
-        # if dataset == "mnist":
-        #     reload(mnist_corruptions)
+    # if test_on_corruptions:
+    #     # if dataset == "mnist":
+    #     #     reload(mnist_corruptions)
 
-        mean, err = 0., 0.
-        for corruption in corruptions:
-            # if os.path.isdir(corruption_base_path + corruption):
-            #     data_path = corruption_base_path + corruption + '/test_images.npy'
-            #     label_path = corruption_base_path + corruption + '/test_labels.npy'
-            if dataset != "mnist":
-                data_path = corruption_base_path + corruption + '.npy'
-                label_path = corruption_base_path + 'labels.npy'
-                test_dataset.data = np.load(data_path)
-                test_dataset.targets = torch.LongTensor(np.load(label_path))
-            m, e = test(test_dataset, dataset, corruption)
-            print('On Corruption {}: Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(corruption, m, e))
-            mean+=m
-            err+=e
-        mean /= len(corruptions)
-        err /= len(corruptions)
-    else:
-        mean, err = test(test_dataset, dataset)
+    #     mean, err = 0., 0.
+    #     for corruption in corruptions:
+    #         # if os.path.isdir(corruption_base_path + corruption):
+    #         #     data_path = corruption_base_path + corruption + '/test_images.npy'
+    #         #     label_path = corruption_base_path + corruption + '/test_labels.npy'
+    #         if dataset != "mnist":
+    #             data_path = corruption_base_path + corruption + '.npy'
+    #             label_path = corruption_base_path + 'labels.npy'
+    #             test_dataset.data = np.load(data_path)
+    #             test_dataset.targets = torch.LongTensor(np.load(label_path))
+    #         m, e = test(test_dataset, corruption)
+    #         print('On Corruption {}: Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(corruption, m, e))
+    #         mean+=m
+    #         err+=e
+    #     mean /= len(corruptions)
+    #     err /= len(corruptions)
+    # else:
+    #     mean, err = test(test_dataset)
     
-    print('Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(mean, err))
+    # print('Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(mean, err))
 
 @ex.command(unobserved=True)
 def sample(seed, num_bits, num_samples, samples_per_row, _log, output_path=None):

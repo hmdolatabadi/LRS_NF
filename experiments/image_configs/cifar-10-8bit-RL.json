@@ -23,6 +23,12 @@
     "pixelate",
     "jpeg_compression"
   ],
+  "corruption": "None",
+  "freeze": true,
+  "tune_layers": [
+    "_transform._transforms.1._transforms.2._transforms.7",
+    "_transform._transforms.1._transforms.2._transforms.8"
+  ],
   "coupling_layer_type": "rational_linear_spline",
   "dataset": "cifar-10",
   "dropout_prob": 0.2,
