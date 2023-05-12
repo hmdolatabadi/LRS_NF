@@ -11,7 +11,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.utils import data
 from tqdm import tqdm
 from torchvision.utils import save_image
-import toy_data
+
 import data as data_
 import nn as nn_
 import utils
@@ -174,8 +174,7 @@ for step in tbar:
     optimizer.zero_grad()
     scheduler.step(step)
 
-    batch = toy_data.inf_train_gen(args.dataset_name, batch_size=args.batch_size)
-    batch = torch.from_numpy(batch).type(torch.float32).to(device)
+    batch = next(train_loader).to(device)
 
     _, log_density = flow.log_prob(batch)
     loss = - torch.mean(log_density)
