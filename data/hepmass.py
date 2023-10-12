@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import pandas as pd
+import sys
+sys.path.append('/nobackup/naman/LRS_NF/')
 import utils
 
 from collections import Counter
@@ -102,6 +104,7 @@ class HEPMASSDataset(Dataset):
 
 
 def main():
+    save_splits()
     dataset = HEPMASSDataset(split='train')
     print(type(dataset.data))
     print(dataset.data.shape)

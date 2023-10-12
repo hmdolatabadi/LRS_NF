@@ -1,6 +1,10 @@
 import os
 import time
 
+import sys
+# sys.path.append('/nobackup/naman/LRS_NF/')
+sys.path.append('/nobackup/naman/LRS_NF/')
+
 import numpy as np
 import scipy.misc
 import sacred
@@ -30,6 +34,9 @@ import matplotlib
 matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
+from importlib import reload
+
+import json
 
 # Capture job id on the cluster
 sacred.SETTINGS.HOST_INFO.CAPTURED_ENV.append('SLURM_JOB_ID')
@@ -113,6 +120,8 @@ def config():
     num_reconstruct_batches = 10
     iter_num=10000
 
+    augment = False
+
 
 class ConvNet(nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
@@ -135,6 +144,8 @@ def create_transform_step(num_channels,
                           use_resnet, num_res_blocks, resnet_batchnorm, dropout_prob):
     if use_resnet:
         def create_convnet(in_channels, out_channels):
+            # in_channel = 6
+            # out_channels = 90
             net = nn_.ConvResidualNet(in_channels=in_channels,
                                       out_channels=out_channels,
                                       hidden_channels=hidden_channels,
@@ -148,6 +159,8 @@ def create_transform_step(num_channels,
         def create_convnet(in_channels, out_channels):
             return ConvNet(in_channels, hidden_channels, out_channels)
 
+    # here num_channels = 4c = 12
+    # divide data into two parts (split at midpoint)
     mask = utils.create_mid_split_binary_mask(num_channels)
 
     if coupling_layer_type == 'cubic_spline':
@@ -225,7 +238,7 @@ def create_transform_step(num_channels,
 @ex.capture
 def create_transform(c, h, w,
                      levels, hidden_channels, steps_per_level, alpha, num_bits, preprocessing,
-                     multi_scale):
+                     multi_scale, augment):
     if not isinstance(hidden_channels, list):
         hidden_channels = [hidden_channels] * levels
 
@@ -233,6 +246,11 @@ def create_transform(c, h, w,
         mct = transforms.MultiscaleCompositeTransform(num_transforms=levels)
         for level, level_hidden_channels in zip(range(levels), hidden_channels):
             squeeze_transform = transforms.SqueezeTransform()
+
+            # after squeeze transform (explained in RealNVP paper)
+            # c = 4c
+            # h = h/2
+            # w = w/2
             c, h, w = squeeze_transform.get_output_shape(c, h, w)
 
             transform_level = transforms.CompositeTransform(
@@ -294,10 +312,18 @@ def create_transform(c, h, w,
 
 @ex.capture
 def create_flow(c, h, w,
-                flow_checkpoint, _log):
+                flow_checkpoint, _log, num_bits, augment):
 
     distribution = distributions.StandardNormal((c * h * w,))
     transform    = create_transform(c, h, w)
+
+    # if augment:
+    #     _log.info('[augment] Adding a new transform layer')
+
+    #     transform = transforms.CompositeTransform([
+    #         transform,
+    #         transforms.AffineScalarTransform(scale=(1. / 2 ** num_bits), shift=-0.5)
+    #     ])
 
     flow = flows.Flow(transform, distribution)
 
@@ -305,7 +331,7 @@ def create_flow(c, h, w,
         utils.get_num_parameters(flow)))
 
     if flow_checkpoint is not None:
-        flow.load_state_dict(torch.load(flow_checkpoint))
+        flow.load_state_dict(torch.load(flow_checkpoint), strict=False)
         _log.info('Flow state loaded from {}'.format(flow_checkpoint))
 
     return flow
@@ -314,7 +340,7 @@ def create_flow(c, h, w,
 def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
                batch_size, num_steps, learning_rate, cosine_annealing, warmup_fraction,
                temperatures, num_bits, num_workers, intervals, multi_gpu, actnorm,
-               optimizer_checkpoint, start_step, eta_min, _log):
+               optimizer_checkpoint, start_step, eta_min, _log, augment, freeze, tune_layers):
     run_dir = fso.dir
 
     flow = flow.to(device)
@@ -338,12 +364,24 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         batch_size=batch_size,
         num_workers=0 # Faster than starting all workers just to get a single batch.
     )))
+
     identity_transform = transforms.CompositeTransform([
         flow._transform,
         transforms.InverseTransform(flow._transform)
     ])
 
     optimizer = torch.optim.Adam(flow.parameters(), lr=learning_rate)
+
+    if freeze and augment:
+        _log.info('[augment] Freezing all layers of the flow model except {}'.format(tune_layers))
+
+        for name, param in flow.named_parameters():
+            param.require_grad = False
+            if any(L in name for L in tune_layers):
+                param.require_grad = True
+
+        # only pass params whose requires_grad = True  
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, flow.parameters()), lr=learning_rate, capturable=True)
 
     if optimizer_checkpoint is not None:
         optimizer.load_state_dict(torch.load(optimizer_checkpoint))
@@ -389,7 +427,7 @@ def train_flow(flow, train_dataset, val_dataset, dataset_dims, device,
         optimizer.zero_grad()
 
         batch = batch.to(device)
-
+            
         if multi_gpu:
             if actnorm and step == 0:
                 # Is using actnorm, data-dependent initialization doesn't work with data_parallel,
@@ -505,12 +543,12 @@ def set_device(use_gpu, multi_gpu, _log):
     return device
 
 @ex.capture
-def get_train_valid_data(dataset, num_bits, valid_frac):
-    return get_data(dataset, num_bits, train=True, valid_frac=valid_frac)
+def get_train_valid_data(dataset, num_bits, valid_frac, augment):
+    return get_data(dataset, num_bits, train=True, valid_frac=valid_frac, augment=augment)
 
 @ex.capture
-def get_test_data(dataset, num_bits):
-    return get_data(dataset, num_bits, train=False)
+def get_test_data(dataset, num_bits, augment, corruption):
+    return get_data(dataset, num_bits, train=False, augment=augment, corruption=corruption)
 
 @ex.command
 def sample_for_paper(seed):
@@ -527,48 +565,72 @@ def sample_for_paper(seed):
 
 
 @ex.command(unobserved=True)
-def eval_on_test(batch_size, num_workers, seed, _log):
+def eval_on_test(batch_size, num_workers, seed, _log, test_on_corruptions, corruption_base_path, corruptions, dataset, flow_checkpoint, tune_layers):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     device = set_device()
+    
     test_dataset, (c, h, w) = get_test_data()
-    _log.info('Test dataset size: {}'.format(len(test_dataset)))
-    _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
-
     flow = create_flow(c, h, w).to(device)
-
     flow.eval()
-
-    def log_prob_fn(batch):
-        return flow.log_prob(batch.to(device))
-
     state_dict = flow.state_dict()
-    count      = 0
-    for name, param in state_dict.items():
 
-        if "weight" in name and not "batch_norm" in name and "conv_layers" in name:
-            print(name, param.shape)
-            param_tmp = param.data.cpu().numpy().reshape(1, -1)
+    # only store the weights of tuned layers
+    param_mat = {}
+    for name, param in flow.named_parameters():
+        param.require_grad = False
+        if any(L in name for L in tune_layers):
+            param_data = param.data.tolist()
+            param_mat[name] = param_data
 
-            if count == 0:
-                params_mat = param_tmp
-            else:
-                params_mat = np.r_[params_mat, param_tmp]
+    with open("./weights_" + flow_checkpoint.split('/')[-2] + ".json", "w") as outfile:
+        json.dump(param_mat, outfile)
 
-            count += 1
+    # def test(data, corruption=None):
+    #     _log.info('Test dataset size: {}'.format(len(data)))
+    #     _log.info('Image dimensions: {}x{}x{}'.format(c, h, w))
+   
+    #     def log_prob_fn(batch):
+    #         return flow.log_prob(batch.to(device))
 
-    np.savetxt("./weights.csv", params_mat, delimiter=",")
+    #     if corruption and dataset == "mnist":
+    #         data, _ = get_test_data(corruption=corruption)
 
-    test_loader=DataLoader(dataset=test_dataset,
-                           batch_size=batch_size,
-                           num_workers=num_workers)
-    test_loader = tqdm(test_loader)
+    #     test_loader=DataLoader(dataset=data,
+    #                         batch_size=batch_size,
+    #                         num_workers=num_workers)
+    #     test_loader = tqdm(test_loader)
 
-    mean, err = autils.eval_log_density_2(log_prob_fn=log_prob_fn,
-                                          data_loader=test_loader,
-                                          c=c, h=h, w=w)
-    print('Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(mean, err))
+    #     mean, err = autils.eval_log_density_2(log_prob_fn=log_prob_fn,
+    #                                         data_loader=test_loader,
+    #                                         c=c, h=h, w=w)
+    #     return mean, err
+        
+    # if test_on_corruptions:
+    #     # if dataset == "mnist":
+    #     #     reload(mnist_corruptions)
+
+    #     mean, err = 0., 0.
+    #     for corruption in corruptions:
+    #         # if os.path.isdir(corruption_base_path + corruption):
+    #         #     data_path = corruption_base_path + corruption + '/test_images.npy'
+    #         #     label_path = corruption_base_path + corruption + '/test_labels.npy'
+    #         if dataset != "mnist":
+    #             data_path = corruption_base_path + corruption + '.npy'
+    #             label_path = corruption_base_path + 'labels.npy'
+    #             test_dataset.data = np.load(data_path)
+    #             test_dataset.targets = torch.LongTensor(np.load(label_path))
+    #         m, e = test(test_dataset, corruption)
+    #         print('On Corruption {}: Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(corruption, m, e))
+    #         mean+=m
+    #         err+=e
+    #     mean /= len(corruptions)
+    #     err /= len(corruptions)
+    # else:
+    #     mean, err = test(test_dataset)
+    
+    # print('Test log probability (bits/dim): {:.2f} +/- {:.4f}'.format(mean, err))
 
 @ex.command(unobserved=True)
 def sample(seed, num_bits, num_samples, samples_per_row, _log, output_path=None):
@@ -592,7 +654,7 @@ def sample(seed, num_bits, num_samples, samples_per_row, _log, output_path=None)
     samples = flow.sample(num_samples)
     samples = preprocess.inverse(samples)
 
-    save_image(samples.cpu(), output_path,
+    save_1   (samples.cpu(), output_path,
                nrow=samples_per_row,
                padding=4,
                pad_value=1)
@@ -643,7 +705,7 @@ def eval_reconstruct(num_bits, batch_size, seed, num_reconstruct_batches, _log, 
 
     flow = create_flow(c, h, w).to(device)
     flow.eval()
-
+    
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,

@@ -1,0 +1,191 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "plane",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": ["--dataset_name=rings", "--base_transform_type=rl-coupling"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "face",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": ["--dataset_name=einstein", "--base_transform_type=rl", "--num_workers=8"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "train_images",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "mnist-checkpoint_train_images",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/mnist-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/mnist-g/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },{
+            "name": "cifar-10-checkpoint_train_images",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-g/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "eval_reconstruct",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "eval_reconstruct", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "sample_for_paper",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "sample_for_paper", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "sample",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "sample", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-8-bit-3/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "mnist-eval_on_test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "eval_on_test", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/mnist-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/mnist-g/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        },
+        {
+            "name": "cifar-eval_on_test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "eval_on_test", 
+                "with", 
+                "/nobackup/naman/LRS_NF/experiments/image_configs/cifar-10-8bit-RL.json", 
+                "flow_checkpoint=/nobackup/naman/LRS_NF/data/runs/images/cifar-10-g/flow_best.pt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/nobackup/naman/LRS_NF",
+            "python": "${command:python.interpreterPath}",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3",
+                "DATAROOT": "/nobackup/naman/LRS_NF/data"
+            }
+        }
+    ]
+}

@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import pandas as pd
+import sys
+sys.path.append('/nobackup/naman/LRS_NF/')
 import utils
 
 from matplotlib import pyplot as plt
@@ -79,6 +81,7 @@ class GasDataset(Dataset):
 
 
 def main():
+    save_splits()
     dataset = GasDataset(split='train')
     print(type(dataset.data))
     print(dataset.data.shape)

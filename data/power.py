@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import sys
+sys.path.append('/nobackup/naman/LRS_NF/')
 import utils
 
 from matplotlib import pyplot as plt
@@ -91,6 +93,7 @@ class PowerDataset(Dataset):
 
 
 def main():
+    save_splits()
     dataset = PowerDataset(split='train')
     print(type(dataset.data))
     print(dataset.data.shape)

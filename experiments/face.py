@@ -3,6 +3,10 @@ import json
 import numpy as np
 import torch
 import os
+import sys
+# sys.path.append('/nobackup/naman/LRS_NF/')
+sys.path.append('/nobackup/cole/LRS_NF/')
+os.environ["DATAROOT"] = str(os.path.join(os.getcwd(), "data"))
 
 from matplotlib import cm, pyplot as plt
 from tensorboardX import SummaryWriter
@@ -85,6 +89,8 @@ if args.use_gpu:
 else:
     device = torch.device('cpu')
 
+print(device)
+
 # create data
 train_dataset = data_.load_face_dataset(
     name=args.dataset_name,
@@ -93,7 +99,7 @@ train_dataset = data_.load_face_dataset(
 train_loader = data_.InfiniteLoader(
     dataset=train_dataset,
     batch_size=args.batch_size,
-    shuffle=True,
+    shuffle=False,
     drop_last=True,
     num_epochs=None
 )
@@ -189,7 +195,7 @@ n_params = utils.get_num_parameters(flow)
 print('There are {} trainable parameters in this model.'.format(n_params))
 
 # create optimizer
-optimizer = optim.Adam(flow.parameters(), lr=args.learning_rate)
+optimizer = optim.Adam(flow.parameters(), lr=args.learning_rate, capturable=True) # added capturable here
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.n_total_steps)
 
 # create summary writer and write to log directory
@@ -203,7 +209,7 @@ with open(filename, 'w') as file:
 tbar = tqdm(range(args.n_total_steps))
 for step in tbar:
     flow.train()
-    scheduler.step(step)
+    # scheduler.step(step)
     optimizer.zero_grad()
 
     batch = next(train_loader).to(device)
